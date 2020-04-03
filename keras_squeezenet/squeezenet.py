@@ -2,7 +2,7 @@ from keras_applications.imagenet_utils import _obtain_input_shape
 from keras import backend as K
 from keras.layers import Input, Convolution2D, MaxPooling2D, Activation, concatenate, Dropout
 from keras.layers import GlobalAveragePooling2D, GlobalMaxPooling2D
-from keras.models import Model
+from keras.models import Model,Sequential
 from keras.engine.topology import get_source_inputs
 from keras.utils import get_file
 from keras.utils import layer_utils
@@ -44,8 +44,10 @@ def fire_module(x, fire_id, squeeze=16, expand=64):
 def SqueezeNet(include_top=True, weights='imagenet',
                input_tensor=None, input_shape=None,
                pooling=None,
-               classes=1000):
+               classes=1000,
+               transfer_learning = False):
     """Instantiates the SqueezeNet architecture.
+       transfer_learning (bool): if true, then the returned model will have a trainable top exactly like the main squeeznet model's top. But the bottom (!) of the model will not be trainable.
     """
         
     if weights not in {'imagenet', None}:
@@ -145,6 +147,19 @@ def SqueezeNet(include_top=True, weights='imagenet',
                               '`image_data_format="channels_last"` in '
                               'your Keras config '
                               'at ~/.keras/keras.json.')
-    return model
+
+    if transfer_learning:
+           s_model = Sequential()
+           s_model.add(model)
+           s_model.add(Dropout(0.5))
+           s_model.add(Convolution2D(classes,(1, 1), padding='valid'))
+           s_model.add(Activation('relu'))
+           s_model.add(GlobalAveragePooling2D())
+           s_model.add(Activation('softmax'))
+           s_model.layers[0].trainable = False
+           return s_model
+    else:
+           return model
+           
 
 
